@@ -19,7 +19,8 @@ function currentBars() {
   const src = $('src').value;
   if (src.startsWith('csv:')) return csvFiles.get(src.slice(4)) || genDemoBars({ seed: 7 });
   if (src === 'demo') return genDemoBars({ seed: +$('seed').value });
-  return genBars({ n: +$('nbars').value, seed: +$('seed').value, style: src });
+  // 「根数」也控制在线拉取量；合成数据对「全部」档封顶，防止生成十万根
+  return genBars({ n: Math.min(+$('nbars').value, 5000), seed: +$('seed').value, style: src });
 }
 
 function pipeline(bars, biMode) {
@@ -127,28 +128,55 @@ function normCode(raw) {
 }
 const PERIOD_NAME = { month: '月线', week: '周线', day: '日线', m60: '60分', m30: '30分', m15: '15分', m5: '5分' };
 
+const PAGE = 2000; // 腾讯日/周/月线单次上限（实测 2000 可、3000 拒）
+
+// 单页拉取：能力探测链 本地/CF 代理 → fetch 直连（扩展 host_permissions 豁免 CORS）→ JSONP（纯静态网页）
+async function pullPage(code, period, n, end = '') {
+  try {
+    return await api(`api/quote?code=${code}&period=${period}&n=${n}${end ? '&end=' + end : ''}`);
+  } catch (e) {
+    if (e.message !== '服务接口不可用') throw e;
+    try {
+      return await fetchQuoteDirect(code, period, n, end);
+    } catch {
+      return await fetchQuoteJsonp(code, period, n, end);
+    }
+  }
+}
+
+function prevDay(ds) {
+  return new Date(new Date(ds + 'T00:00:00Z').getTime() - 86400000).toISOString().slice(0, 10);
+}
+
 async function fetchQuote() {
   const code = normCode($('quote-code').value);
   if (!code) { alert('代码格式：6位数字（自动判沪深），指数请带前缀如 sh000001'); return; }
   const period = $('quote-period').value;
+  const want = +$('nbars').value; // 「根数」下拉同时控制拉取量；99999=全部
+  const isMinute = period !== 'month' && period.startsWith('m');
   const btn = $('quote-go');
   btn.disabled = true; btn.textContent = '拉取中…';
   try {
-    const n = period.startsWith('m') && period !== 'month' ? 1023 : period === 'day' ? 800 : 2000;
-    // 能力探测链：本地/CF 代理 → fetch 直连（浏览器扩展 host_permissions 豁免 CORS）→ JSONP（纯静态网页）
     let d;
-    try {
-      d = await api(`api/quote?code=${code}&period=${period}&n=${n}`);
-    } catch (e) {
-      if (e.message !== '服务接口不可用') throw e;
-      try {
-        d = await fetchQuoteDirect(code, period, n);
-      } catch {
-        d = await fetchQuoteJsonp(code, period, n);
+    if (isMinute) {
+      d = await pullPage(code, period, Math.min(Math.max(want, 300), 1023)); // 新浪分钟线硬上限1023
+    } else {
+      d = await pullPage(code, period, Math.min(want, PAGE));
+      // 翻页拼接：end=最早日期前一天继续往前；返回不足一页即到头（12页护栏≈百年日线）
+      let guard = 12;
+      while (d.rows.length < want && guard-- > 0) {
+        const earliest = d.rows[0][0];
+        let prev;
+        try { prev = await pullPage(code, period, PAGE, prevDay(earliest)); } catch { break; }
+        const older = prev.rows.filter(r => r[0] < earliest);
+        if (!older.length) break;
+        d.rows = older.concat(d.rows);
+        btn.textContent = `拉取中…已${d.rows.length}根`;
+        if (prev.rows.length < PAGE) break;
       }
     }
     const csv = 'date,open,high,low,close,volume\n' + d.rows.map(r => r.join(',')).join('\n');
-    const name = `${d.name || code}(${code})·${PERIOD_NAME[period]}`;
+    const name = `${d.name || code}(${code})·${PERIOD_NAME[period]}${d.rows.length > PAGE ? '·' + d.rows.length + '根' : ''}`;
     csvFiles.set(name, parseCSV(csv));
     rebuildCsvOptions();
     $('src').value = 'csv:' + name;

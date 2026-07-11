@@ -8,6 +8,10 @@ export async function onRequestGet({ request }) {
   const code = (u.searchParams.get('code') || '').toLowerCase();
   const period = u.searchParams.get('period') || 'day';
   const n = Math.min(parseInt(u.searchParams.get('n') || '800', 10) || 800, 2000);
+  const end = u.searchParams.get('end') || '';
+  if (end && !/^\d{4}-\d{2}-\d{2}$/.test(end)) {
+    return new Response(JSON.stringify({ error: 'end 格式应为 YYYY-MM-DD' }), { status: 400, headers: { 'content-type': 'application/json; charset=utf-8' } });
+  }
   const J = (obj, status = 200) => new Response(JSON.stringify(obj), {
     status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
   });
@@ -25,7 +29,7 @@ export async function onRequestGet({ request }) {
       const d = await r.json();
       recs = (d || []).map(x => [x.day.slice(0, 16), x.open, x.high, x.low, x.close, x.volume || '']);
     } else {
-      const r = await fetch(`https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=${code},${period},,,${n},qfq`, { headers: UA });
+      const r = await fetch(`https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=${code},${period},,${end},${n},qfq`, { headers: UA });
       const d = await r.json();
       const rows = (d.data && d.data[code] && (d.data[code]['qfq' + period] || d.data[code][period])) || [];
       // 腾讯行: [日期, 开, 收, 高, 低, 量, ...]

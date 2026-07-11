@@ -27,11 +27,11 @@ def http_json(url):
         return json.load(r)
 
 
-def fetch_quote(code, period, n):
-    """拉取行情：day/week/month=腾讯前复权；m5/m15/m30/m60=新浪分钟线（不复权）。
+def fetch_quote(code, period, n, end=''):
+    """拉取行情：day/week/month=腾讯前复权（end=YYYY-MM-DD 可往前翻页）；m5/m15/m30/m60=新浪分钟线（不复权）。
     返回 {code, name, period, rows: [[date, o, h, l, c, v], ...]}"""
     if period in ('day', 'week', 'month'):
-        d = http_json(f'https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param={code},{period},,,{n},qfq')
+        d = http_json(f'https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param={code},{period},,{end},{n},qfq')
         rows = d['data'][code].get('qfq' + period) or d['data'][code].get(period) or []
         # 腾讯行: [日期, 开, 收, 高, 低, 量, ...]
         recs = [[r[0], r[1], r[3], r[4], r[2], r[5] if len(r) > 5 else ''] for r in rows]
@@ -75,14 +75,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             code = (q.get('code') or [''])[0].lower()
             period = (q.get('period') or ['day'])[0]
             n = min(int((q.get('n') or ['800'])[0]), 2000)
+            end = (q.get('end') or [''])[0]
             if not re.fullmatch(r'(sh|sz)\d{6}', code):
                 self._json({'error': '代码格式应为 sh/sz + 6位数字，如 sh688719'}, 400)
                 return
             if period not in ('day', 'week', 'month') and period not in MINUTE_SCALES:
                 self._json({'error': f'周期仅支持 day/week/month/{"/".join(MINUTE_SCALES)}'}, 400)
                 return
+            if end and not re.fullmatch(r'\d{4}-\d{2}-\d{2}', end):
+                self._json({'error': 'end 格式应为 YYYY-MM-DD'}, 400)
+                return
             try:
-                d = fetch_quote(code, period, n)
+                d = fetch_quote(code, period, n, end)
                 if not d['rows']:
                     self._json({'error': '未取到数据（检查代码是否存在）'}, 404)
                 else:

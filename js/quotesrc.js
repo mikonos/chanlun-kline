@@ -28,12 +28,12 @@ function takeGlobal(key) {
   return v;
 }
 
-async function tencentKline(code, period, n) {
+async function tencentKline(code, period, n, end = '') {
   const cb = `__cl_t${++seq}`;
   window[cb] = data => { window[cb + '_d'] = data; };
   try {
     const d = await loadScript(
-      `https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?_callback=${cb}&param=${code},${period},,,${n},qfq`,
+      `https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?_callback=${cb}&param=${code},${period},,${end},${n},qfq`,
       () => takeGlobal(cb + '_d'),
     );
     const node = d && d.data && d.data[code];
@@ -66,17 +66,17 @@ async function tencentName(code) {
   } catch { return ''; }
 }
 
-export async function fetchQuoteJsonp(code, period, n) {
+export async function fetchQuoteJsonp(code, period, n, end = '') {
   const rows = MINUTE_SCALES[period]
     ? await sinaKline(code, MINUTE_SCALES[period], n)
-    : await tencentKline(code, period, n);
+    : await tencentKline(code, period, n, end);
   if (!rows.length) throw new Error('未取到数据（检查代码是否存在）');
   return { code, name: await tencentName(code), period, rows };
 }
 
 // fetch 直连版：浏览器扩展（manifest host_permissions 豁免 CORS）或任何无同源限制的环境。
 // 普通网页里调用会因 CORS 抛错，调用方按能力探测顺序自然回落到 JSONP。
-export async function fetchQuoteDirect(code, period, n) {
+export async function fetchQuoteDirect(code, period, n, end = '') {
   let rows;
   if (MINUTE_SCALES[period]) {
     const r = await fetch(`https://quotes.sina.cn/cn/api/json_v2.php/CN_MarketDataService.getKLineData`
@@ -84,7 +84,7 @@ export async function fetchQuoteDirect(code, period, n) {
     const d = await r.json();
     rows = (d || []).map(x => [x.day.slice(0, 16), x.open, x.high, x.low, x.close, x.volume || '']);
   } else {
-    const r = await fetch(`https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=${code},${period},,,${n},qfq`);
+    const r = await fetch(`https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=${code},${period},,${end},${n},qfq`);
     const d = await r.json();
     const node = d.data && d.data[code];
     rows = ((node && (node['qfq' + period] || node[period])) || []).map(x => [x[0], x[1], x[3], x[4], x[2], x[5] ?? '']);
