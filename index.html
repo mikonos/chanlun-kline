@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>缠论看图 · 教你炒股票</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header>
+  <h1>缠论看图</h1>
+  <div class="ctl">
+    <label>股票 <input id="quote-code" placeholder="688719 / sh000001" size="12"></label>
+    <label>周期
+      <select id="quote-period">
+        <option value="month">月线</option>
+        <option value="week">周线</option>
+        <option value="day" selected>日线</option>
+        <option value="m60">60分钟</option>
+        <option value="m30">30分钟</option>
+        <option value="m15">15分钟</option>
+        <option value="m5">5分钟</option>
+      </select>
+    </label>
+    <button id="quote-go">看图</button>
+    <label>数据
+      <select id="src">
+        <option value="demo" selected>教学走势·完整信号链</option>
+        <option value="mixed">合成·趋势与盘整</option>
+        <option value="trend">合成·强趋势</option>
+        <option value="range">合成·宽幅震荡</option>
+      </select>
+    </label>
+    <label>根数
+      <select id="nbars">
+        <option>300</option><option selected>800</option><option>2000</option><option>3200</option>
+      </select>
+    </label>
+    <label>种子 <input id="seed" type="number" value="42" min="1" step="1"></label>
+    <button id="regen">换一组</button>
+    <label>笔
+      <select id="bimode">
+        <option value="strict" selected>严格（62/77课）</option>
+        <option value="loose">宽松（79/80课）</option>
+      </select>
+    </label>
+    <label class="file">CSV可多选<input id="csv" type="file" accept=".csv,.txt" multiple></label>
+    <button id="hist-btn">历史 ▾</button>
+  </div>
+  <div class="ctl sw">
+    <label><input type="checkbox" id="sw-merged">合并K</label>
+    <label><input type="checkbox" id="sw-fx">分型</label>
+    <label><input type="checkbox" id="sw-bi" checked>笔</label>
+    <label><input type="checkbox" id="sw-seg" checked>线段</label>
+    <label><input type="checkbox" id="sw-zs" checked>段中枢</label>
+    <label><input type="checkbox" id="sw-zsbi">笔中枢</label>
+    <label><input type="checkbox" id="sw-sig" checked>买卖点</label>
+    <label><input type="checkbox" id="sw-band" checked>背驰带</label>
+    <label><input type="checkbox" id="sw-lv" checked>级别递归</label>
+  </div>
+</header>
+<main>
+  <div id="main-wrap"><canvas id="main-cv"></canvas><div id="info"></div></div>
+  <div id="macd-wrap"><canvas id="macd-cv"></canvas></div>
+</main>
+<div id="hist-panel" hidden>
+  <div class="hist-head">
+    <input id="hist-note" placeholder="备注（可空），如：三卖后观察反弹">
+    <button id="hist-save">保存当前分析</button>
+    <label class="file">导入JSON<input id="hist-import" type="file" accept=".json"></label>
+    <span id="hist-count"></span>
+  </div>
+  <div id="hist-list"></div>
+</div>
+<footer>
+  <span id="stats"></span>
+  <span class="legend">
+    <i class="sq" style="background:#e0524f"></i>阳
+    <i class="sq" style="background:#3fa87c"></i>阴
+    <i class="ln" style="background:#e8c76a"></i>笔
+    <i class="ln thick" style="background:#5b8cff"></i>线段
+    <i class="sq zs"></i>中枢[ZD,ZG]
+    <b style="color:#ffb02e">▼</b>顶分型
+    <b style="color:#39c0f0">▲</b>底分型
+    <b class="tag" style="background:#e74c3c">B1/2/3</b>买点
+    <b class="tag" style="background:#27ae60">S1/2/3</b>卖点
+    <b style="color:#ffb02e">◇</b>盘整背驰
+    ｜ 滚轮缩放 · 拖动平移 · 双击复位 · 虚线=未完成
+  </span>
+  <span class="legend" style="opacity:.55">理论出处：缠中说禅《教你炒股票》108课（原文规则实现，规格见仓库 docs/）· 研究学习用途，不构成投资建议 · 行情数据：腾讯/新浪公开接口</span>
+</footer>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
