@@ -9,8 +9,9 @@ import { buildSegments } from '../js/segment.js';
 import { buildZhongshus, linkZhongshus } from '../js/zhongshu.js';
 import { computeMACD } from '../js/macd.js';
 import { computeSignals } from '../js/signals.js';
-import { genBars, parseCSV } from '../js/data.js';
+import { genBars, genDemoBars, parseCSV } from '../js/data.js';
 import { buildLevels } from '../js/recursion.js';
+import { buildCommentary } from '../js/commentary.js';
 
 let n = 0, failed = 0;
 function t(name, fn) {
@@ -287,6 +288,31 @@ t('递归·全管线不变量（覆盖无缝/递归收敛/末组未完成）', (
       if (L.trends.length) assert.equal(L.trends[L.trends.length - 1].endU, L.units.length - 1, '覆盖到最后一个单元');
     }
   }
+});
+
+t('点评·教学数据生成完整且句句可回溯', () => {
+  const bars = genDemoBars({ seed: 42 });
+  const merged = mergeKlines(bars);
+  const strokes = buildBis(merged, buildBiPoints(merged, findFractals(merged), 'strict'));
+  const segments = buildSegments(strokes);
+  const zsSeg = buildZhongshus(segments);
+  const links = linkZhongshus(zsSeg);
+  const macd = computeMACD(bars.map(b => b.c));
+  const d = {
+    bars, strokes, segments, zsSeg, links,
+    levels: buildLevels(segments),
+    signals: computeSignals({ subs: segments, zss: zsSeg, links, macd }),
+  };
+  const cmt = buildCommentary(d);
+  assert.ok(cmt.length >= 4, '至少含格局/当下段或位置/信号/纪律');
+  const all = cmt.join('\n');
+  assert.ok(all.includes('走势类型序列'), '格局句含递归走势类型序列');
+  assert.ok(/B\d·第[一二三]类买点|S\d·第[一二三]类卖点/.test(all), '信号句含最近买卖点');
+  assert.ok(all.includes('不构成投资建议'), '免责句在场');
+  assert.ok(all.includes(`${bars.length}根K线`), '数据规模可回溯');
+  // 无信号分支
+  const cmt2 = buildCommentary({ ...d, signals: [] });
+  assert.ok(cmt2.join('').includes('至今没有出现任何三类买卖点'), '无信号时给完备性提示');
 });
 
 t('信号·全管线不变量（多种子）', () => {

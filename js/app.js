@@ -9,6 +9,7 @@ import { computeMACD } from './macd.js';
 import { computeSignals } from './signals.js';
 import { ChanChart } from './chart.js';
 import { fetchQuoteJsonp } from './quotesrc.js';
+import { buildCommentary } from './commentary.js';
 
 const $ = id => document.getElementById(id);
 const chart = new ChanChart($('main-cv'), $('macd-cv'), $('info'));
@@ -59,6 +60,25 @@ function recompute() {
     `K线 ${bars.length} ｜ 合并后 ${d.merged.length} ｜ 分型 ${d.fractals.length} ｜ 笔 ${d.strokes.length}` +
     ` ｜ 线段 ${d.segments.length} ｜ 段中枢 ${d.zsSeg.length} ｜ 买卖点 ${nsig} ｜ 盘整背驰 ${d.signals.length - nsig}` +
     (lvTxt ? ` ｜ 递归 ${lvTxt}` : '');
+  renderCommentary(d);
+}
+
+function renderCommentary(d) {
+  const box = $('cmt-body');
+  box.innerHTML = '';
+  for (const line of buildCommentary(d)) {
+    const p = document.createElement('p');
+    p.className = 'cmt-item';
+    const i = line.indexOf('：');
+    if (i > 0 && i < 6) {
+      const b = document.createElement('b');
+      b.textContent = line.slice(0, i + 1);
+      p.append(b, line.slice(i + 1));
+    } else {
+      p.textContent = line;
+    }
+    box.appendChild(p);
+  }
 }
 
 function readShow() {

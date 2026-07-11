@@ -57,3 +57,10 @@ footer {
 .hist-item .hi-note { color: #b9a86a; font-size: 11px; margin-top: 2px; }
 .hist-item .hi-ops { display: flex; gap: 4px; flex-shrink: 0; }
 .hist-item button { font-size: 11px; padding: 2px 6px; }
+
+/* 缠师点评 */
+#commentary { padding: 10px 14px 16px; border-top: 1px solid #20242e; background: #0f1116; }
+.cmt-head { font-weight: 600; color: #dfe4ee; margin-bottom: 6px; }
+.cmt-sub { font-weight: 400; font-size: 11px; color: #6f7890; margin-left: 8px; }
+.cmt-item { margin: 6px 0; color: #aab2c4; font-size: 13px; line-height: 1.75; }
+.cmt-item b { color: #dfe4ee; font-weight: 600; }
