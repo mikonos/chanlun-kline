@@ -57,9 +57,11 @@ docs/缠论算法规格.md  原文→实现映射（验收依据）
 
 | 形态 | 在线行情 | 历史存储 | 用法 |
 |---|---|---|---|
-| 本地 `python3 serve.py` | ✅ | 落盘 `history/` | 开发与自用，功能最全 |
-| **Cloudflare Pages**（公网完整版） | ✅（`functions/api/quote.js` 代理） | 访客自己的浏览器 | 注册 Cloudflare → Workers & Pages → Import Git repository → 选本仓库 → 默认设置直接 Deploy |
-| **GitHub Pages**（公网静态版） | ❌（提示导入CSV） | 访客自己的浏览器 | 仓库 Settings 已开启，推送即发布 |
+| 本地 `python3 serve.py` | ✅ 代理 | 落盘 `history/` | 开发与自用，功能最全 |
+| **GitHub Pages**（公网，零后端） | ✅ JSONP 直连（`js/quotesrc.js`：腾讯 `_callback` / 新浪 `jsonp_v2`） | 访客自己的浏览器 | 仓库 Settings 已开启，推送即发布 |
+| Cloudflare Pages（可选加固） | ✅（`functions/api/quote.js` 代理，不依赖 JSONP 接口形态） | 访客自己的浏览器 | 注册 Cloudflare → Workers & Pages → Import Git repository → 选本仓库 → 默认 Deploy |
+
+行情获取顺序：前端先探 `api/quote`（本地/CF 代理），无代理自动切 JSONP 直连。JSONP 依赖行情方接口形态不变，若某天失效，Cloudflare 版是稳定后备。
 
 **发布真源与同步**：真源 = 坚果云项目目录（本目录）；GitHub 仓库是发布镜像（git 仓库不入坚果云，避免同步污染）。改动后同步命令：
 
@@ -73,6 +75,7 @@ cd ~/dev/chanlun-kline && git add -A && git commit -m "sync" && git push
 
 - 2026-07-10 v1：考据（108课全库）→ 实现 → 测试 → 浏览器验收，教学数据完整信号链落地。
 - 2026-07-10 v1.1：次级别支持——fetch 脚本增加分钟周期（新浪源）、CSV 多文件导入切换、分钟时间轴原样字符串显示（不做时区换算）、未完成段按78课标准化画到段内极值；23 项测试；次级别验收证据见规格 §10。
+- 2026-07-11 v1.8：GitHub Pages 零后端拉行情——JSONP 兜底数据源 `js/quotesrc.js`（腾讯 `_callback` 函数调用形态 / 新浪 `jsonp_v2` 全局赋值形态 / qt.gtimg GBK 取名），前端探测代理缺失时自动切换；公网实测 688719 全量日线拉取+分解与本地一致。
 - 2026-07-11 v1.7：公网发布——GitHub 仓库 mikonos/chanlun-kline（发布镜像，真源在坚果云本目录）+ GitHub Pages 静态版上线；历史存储双模式（落盘接口→浏览器 localStorage 自动降级）；API 改相对路径适配子路径部署；functions/api/quote.js 备好 Cloudflare Pages 完整版（连仓库即部署）；页脚加理论出处与免责声明；LICENSE(MIT)。
 - 2026-07-11 v1.6：周期扩展——「看图」支持月线/周线（腾讯前复权，n≤2000），上证月线1990年全史424根实测（严格/宽松口径同判：三段，2005-06起为未完成上升段、极值6124）；缠师看长趋势=换显微镜倍数（69/108课），不是堆K线。
 - 2026-07-11 v1.5：界面直取行情——serve.py 增加 /api/quote 代理（代码白名单校验、日线腾讯/分钟新浪、自动取股票名），顶栏「股票+周期+看图」输入组，拉取结果进「数据」下拉留档；浏览器 E2E（688719 日线+30分）通过。
