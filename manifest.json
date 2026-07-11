@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "缠论看图",
+  "version": "1.10.0",
+  "description": "缠中说禅《教你炒股票》原文规则的K线分析：分型/笔/线段/中枢/买卖点/级别递归+缠师点评。在雪球/东财/新浪等行情页点图标即分析当前股票。研究学习用途，不构成投资建议。",
+  "action": { "default_title": "缠论看图：分析当前页股票" },
+  "background": { "service_worker": "background.js", "type": "module" },
+  "permissions": ["activeTab"],
+  "host_permissions": [
+    "https://web.ifzq.gtimg.cn/*",
+    "https://quotes.sina.cn/*",
+    "https://qt.gtimg.cn/*"
+  ],
+  "icons": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
+}

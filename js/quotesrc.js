@@ -73,3 +73,27 @@ export async function fetchQuoteJsonp(code, period, n) {
   if (!rows.length) throw new Error('未取到数据（检查代码是否存在）');
   return { code, name: await tencentName(code), period, rows };
 }
+
+// fetch 直连版：浏览器扩展（manifest host_permissions 豁免 CORS）或任何无同源限制的环境。
+// 普通网页里调用会因 CORS 抛错，调用方按能力探测顺序自然回落到 JSONP。
+export async function fetchQuoteDirect(code, period, n) {
+  let rows;
+  if (MINUTE_SCALES[period]) {
+    const r = await fetch(`https://quotes.sina.cn/cn/api/json_v2.php/CN_MarketDataService.getKLineData`
+      + `?symbol=${code}&scale=${MINUTE_SCALES[period]}&ma=no&datalen=${Math.min(n, 1023)}`);
+    const d = await r.json();
+    rows = (d || []).map(x => [x.day.slice(0, 16), x.open, x.high, x.low, x.close, x.volume || '']);
+  } else {
+    const r = await fetch(`https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=${code},${period},,,${n},qfq`);
+    const d = await r.json();
+    const node = d.data && d.data[code];
+    rows = ((node && (node['qfq' + period] || node[period])) || []).map(x => [x[0], x[1], x[3], x[4], x[2], x[5] ?? '']);
+  }
+  if (!rows.length) throw new Error('未取到数据（检查代码是否存在）');
+  let name = '';
+  try {
+    const r = await fetch(`https://qt.gtimg.cn/q=${code}`);
+    name = new TextDecoder('gbk').decode(await r.arrayBuffer()).split('~')[1] || '';
+  } catch { /* 名字取不到不影响数据 */ }
+  return { code, name, period, rows };
+}

@@ -8,7 +8,7 @@ import { buildLevels } from './recursion.js';
 import { computeMACD } from './macd.js';
 import { computeSignals } from './signals.js';
 import { ChanChart } from './chart.js';
-import { fetchQuoteJsonp } from './quotesrc.js';
+import { fetchQuoteJsonp, fetchQuoteDirect } from './quotesrc.js';
 import { buildCommentary } from './commentary.js';
 
 const $ = id => document.getElementById(id);
@@ -135,12 +135,17 @@ async function fetchQuote() {
   btn.disabled = true; btn.textContent = '拉取中…';
   try {
     const n = period.startsWith('m') && period !== 'month' ? 1023 : period === 'day' ? 800 : 2000;
+    // 能力探测链：本地/CF 代理 → fetch 直连（浏览器扩展 host_permissions 豁免 CORS）→ JSONP（纯静态网页）
     let d;
     try {
       d = await api(`api/quote?code=${code}&period=${period}&n=${n}`);
     } catch (e) {
       if (e.message !== '服务接口不可用') throw e;
-      d = await fetchQuoteJsonp(code, period, n); // 纯静态部署：JSONP 直连行情源，零后端
+      try {
+        d = await fetchQuoteDirect(code, period, n);
+      } catch {
+        d = await fetchQuoteJsonp(code, period, n);
+      }
     }
     const csv = 'date,open,high,low,close,volume\n' + d.rows.map(r => r.join(',')).join('\n');
     const name = `${d.name || code}(${code})·${PERIOD_NAME[period]}`;
@@ -319,3 +324,15 @@ $('hist-import').addEventListener('change', async e => {
 readShow();
 recompute();
 migrateLocalHist();
+
+// URL 直达：?code=sh688719&period=day —— 浏览器扩展从行情页跳入时用，网页版也可分享带股票的链接
+{
+  const q = new URLSearchParams(location.search);
+  const code = q.get('code');
+  if (code) {
+    $('quote-code').value = code;
+    const period = q.get('period');
+    if (period && [...$('quote-period').options].some(o => o.value === period)) $('quote-period').value = period;
+    fetchQuote();
+  }
+}

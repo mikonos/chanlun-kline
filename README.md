@@ -62,7 +62,17 @@ docs/缠论算法规格.md  原文→实现映射（验收依据）
 | **GitHub Pages**（公网，零后端） | ✅ JSONP 直连（`js/quotesrc.js`：腾讯 `_callback` / 新浪 `jsonp_v2`） | 访客自己的浏览器 | 仓库 Settings 已开启，推送即发布 |
 | Cloudflare Pages（可选加固） | ✅（`functions/api/quote.js` 代理，不依赖 JSONP 接口形态） | 访客自己的浏览器 | 注册 Cloudflare → Workers & Pages → Import Git repository → 选本仓库 → 默认 Deploy |
 
-行情获取顺序：前端先探 `api/quote`（本地/CF 代理），无代理自动切 JSONP 直连。JSONP 依赖行情方接口形态不变，若某天失效，Cloudflare 版是稳定后备。
+行情获取顺序：前端先探 `api/quote`（本地/CF 代理）→ fetch 直连（浏览器扩展，host_permissions 豁免 CORS）→ JSONP（纯静态网页）。JSONP 依赖行情方接口形态不变，若某天失效，Cloudflare 版是稳定后备。
+
+### 浏览器扩展（第四形态）
+
+仓库本身就是一个 Manifest V3 扩展（`manifest.json` + `background.js` 在仓库根）：
+
+1. 下载仓库（`git clone` 或 GitHub 页面 Code → Download ZIP 解压）
+2. Chrome/Edge 打开 `chrome://extensions` → 开启右上角「开发者模式」→「加载已解压的扩展程序」→ 选仓库目录
+3. 在**雪球 / 东方财富 / 股吧 / 新浪财经 / 腾讯自选股 / 同花顺**的个股页上点工具栏图标 → 自动识别当前页股票代码，新标签打开缠论看图并直接出图+缠师点评；非行情页点击则打开空白应用
+
+扩展内行情走 fetch 直连（免代理免 JSONP），历史存扩展自身的 localStorage。URL 直达参数对所有形态通用：`index.html?code=sh688719&period=m30`（period 可省略，默认日线）——网页版也能用它分享「带股票的链接」。
 
 **发布真源与同步**：真源 = 坚果云项目目录（本目录）；GitHub 仓库是发布镜像（git 仓库不入坚果云，避免同步污染）。改动后同步命令：
 
@@ -76,6 +86,7 @@ cd ~/dev/chanlun-kline && git add -A && git commit -m "sync" && git push
 
 - 2026-07-10 v1：考据（108课全库）→ 实现 → 测试 → 浏览器验收，教学数据完整信号链落地。
 - 2026-07-10 v1.1：次级别支持——fetch 脚本增加分钟周期（新浪源）、CSV 多文件导入切换、分钟时间轴原样字符串显示（不做时区换算）、未完成段按78课标准化画到段内极值；23 项测试；次级别验收证据见规格 §10。
+- 2026-07-11 v1.10：浏览器扩展（MV3）——仓库根即扩展：`manifest.json`（activeTab+行情域 host_permissions）+ `background.js`（点击图标→`js/stockurl.js` 从行情页URL识别代码→打开 `index.html?code=`）；行情能力探测链升级为 代理→fetch直连→JSONP 三级；`?code=&period=` 直达参数（网页版通用）；图标由 `tools/gen_icons.py` 零依赖生成；28项测试（新增URL识别判例）。
 - 2026-07-11 v1.9：缠师点评——`commentary.js` 从管线结构确定性生成六条解读（格局/当下段/位置/信号/力度/纪律），运行极值含未成笔尾巴；金句池逐字核对（更正讹传：5课原文是「市场无须分析」非「无须预测」）；27项测试。
 - 2026-07-11 v1.8：GitHub Pages 零后端拉行情——JSONP 兜底数据源 `js/quotesrc.js`（腾讯 `_callback` 函数调用形态 / 新浪 `jsonp_v2` 全局赋值形态 / qt.gtimg GBK 取名），前端探测代理缺失时自动切换；公网实测 688719 全量日线拉取+分解与本地一致。
 - 2026-07-11 v1.7：公网发布——GitHub 仓库 mikonos/chanlun-kline（发布镜像，真源在坚果云本目录）+ GitHub Pages 静态版上线；历史存储双模式（落盘接口→浏览器 localStorage 自动降级）；API 改相对路径适配子路径部署；functions/api/quote.js 备好 Cloudflare Pages 完整版（连仓库即部署）；页脚加理论出处与免责声明；LICENSE(MIT)。

@@ -12,6 +12,7 @@ import { computeSignals } from '../js/signals.js';
 import { genBars, genDemoBars, parseCSV } from '../js/data.js';
 import { buildLevels } from '../js/recursion.js';
 import { buildCommentary } from '../js/commentary.js';
+import { extractStockCode } from '../js/stockurl.js';
 
 let n = 0, failed = 0;
 function t(name, fn) {
@@ -313,6 +314,26 @@ t('点评·教学数据生成完整且句句可回溯', () => {
   // 无信号分支
   const cmt2 = buildCommentary({ ...d, signals: [] });
   assert.ok(cmt2.join('').includes('至今没有出现任何三类买卖点'), '无信号时给完备性提示');
+});
+
+t('扩展·行情页URL识别股票代码', () => {
+  const cases = [
+    ['https://xueqiu.com/S/SH688719', 'sh688719'],
+    ['https://xueqiu.com/S/SZ300750?from=home', 'sz300750'],
+    ['https://quote.eastmoney.com/sh688719.html', 'sh688719'],
+    ['https://quote.eastmoney.com/kcb/688719.html', 'sh688719'],
+    ['https://guba.eastmoney.com/list,688719.html', 'sh688719'],
+    ['https://guba.eastmoney.com/list,000001.html', 'sz000001'],
+    ['https://finance.sina.com.cn/realstock/company/sh688719/nc.shtml', 'sh688719'],
+    ['https://gu.qq.com/sz002594/gp', 'sz002594'],
+    ['https://stockpage.10jqka.com.cn/688719/', 'sh688719'],
+    ['https://example.com/article/sh600519-analysis', 'sh600519'],
+    ['https://www.baidu.com/', null],
+    ['', null],
+  ];
+  for (const [url, want] of cases) {
+    assert.equal(extractStockCode(url), want, url);
+  }
 });
 
 t('信号·全管线不变量（多种子）', () => {
