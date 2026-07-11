@@ -114,7 +114,7 @@ async function fetchQuote() {
   btn.disabled = true; btn.textContent = '拉取中…';
   try {
     const n = period.startsWith('m') && period !== 'month' ? 1023 : period === 'day' ? 800 : 2000;
-    const d = await api(`/api/quote?code=${code}&period=${period}&n=${n}`);
+    const d = await api(`api/quote?code=${code}&period=${period}&n=${n}`);
     const csv = 'date,open,high,low,close,volume\n' + d.rows.map(r => r.join(',')).join('\n');
     const name = `${d.name || code}(${code})·${PERIOD_NAME[period]}`;
     csvFiles.set(name, parseCSV(csv));
@@ -139,7 +139,8 @@ async function api(path, opts = {}) {
   try { r = await fetch(path, opts); }
   catch { throw new Error('服务接口不可用'); }
   const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(d.error || r.statusText);
+  // 静态部署下 api 路径返回 404 HTML（无 d.error）→ 视为「无服务接口」；HTTP/2 的 statusText 常为空串
+  if (!r.ok) throw new Error(d.error || (r.status === 404 ? '服务接口不可用' : `HTTP ${r.status} ${r.statusText}`.trim()));
   return d;
 }
 
@@ -147,7 +148,7 @@ const LS_KEY = 'chanlun_history_v1';
 let histApi = null; // null=未探测 true=落盘接口 false=localStorage
 async function histBackend() {
   if (histApi === null) {
-    try { await api('/api/history'); histApi = true; } catch { histApi = false; }
+    try { await api('api/history'); histApi = true; } catch { histApi = false; }
   }
   return histApi;
 }
@@ -155,24 +156,24 @@ const lsRead = () => { try { return JSON.parse(localStorage.getItem(LS_KEY)) || 
 const lsWrite = arr => localStorage.setItem(LS_KEY, JSON.stringify(arr));
 
 async function histList() {
-  if (await histBackend()) return api('/api/history');
+  if (await histBackend()) return api('api/history');
   return lsRead().map(h => ({ file: h.id, ts: h.ts, title: h.title, note: h.note, summary: h.summary, biMode: h.biMode }));
 }
 async function histGet(key) {
-  if (await histBackend()) return api('/api/history/' + encodeURIComponent(key));
+  if (await histBackend()) return api('api/history/' + encodeURIComponent(key));
   const h = lsRead().find(x => x.id === key);
   if (!h) throw new Error('记录不存在');
   return h;
 }
 async function histPut(snap) {
-  if (await histBackend()) return api('/api/history', { method: 'POST', body: JSON.stringify(snap) });
+  if (await histBackend()) return api('api/history', { method: 'POST', body: JSON.stringify(snap) });
   const arr = lsRead();
   arr.unshift(snap);
   while (arr.length > 30) arr.pop();
   try { lsWrite(arr); } catch (e) { throw new Error('浏览器存储已满，请删除旧记录：' + e.message); }
 }
 async function histDel(key) {
-  if (await histBackend()) return api('/api/history/' + encodeURIComponent(key), { method: 'DELETE' });
+  if (await histBackend()) return api('api/history/' + encodeURIComponent(key), { method: 'DELETE' });
   lsWrite(lsRead().filter(x => x.id !== key));
 }
 
@@ -182,7 +183,7 @@ async function migrateLocalHist() {
   if (!old.length) return;
   try {
     if (!(await histBackend())) return; // 静态部署：localStorage 即正式存储，不迁移
-    for (const h of old.reverse()) await api('/api/history', { method: 'POST', body: JSON.stringify(h) });
+    for (const h of old.reverse()) await api('api/history', { method: 'POST', body: JSON.stringify(h) });
     localStorage.removeItem(LS_KEY);
   } catch { /* 接口中途失败时保留原数据，下次启动再试 */ }
 }
