@@ -362,5 +362,12 @@ migrateLocalHist();
     const period = q.get('period');
     if (period && [...$('quote-period').options].some(o => o.value === period)) $('quote-period').value = period;
     fetchQuote();
+  } else if (q.get('src') === 'ext') {
+    // 扩展跳入但没识别到代码：把没识别到这件事做成看得见的提示
+    const inp = $('quote-code');
+    inp.placeholder = '未识别到代码，请手输';
+    inp.style.outline = '2px solid #e8c76a';
+    inp.focus();
+    setTimeout(() => { inp.style.outline = ''; }, 3000);
   }
 }

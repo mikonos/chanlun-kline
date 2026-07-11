@@ -8,6 +8,7 @@ const PATTERNS = [
   /finance\.sina\.com\.cn\/realstock\/company\/(sh|sz)(\d{6})/i, // 新浪财经
   /gu\.qq\.com\/(sh|sz)(\d{6})/i,                             // 腾讯自选股
   /stockpage\.10jqka\.com\.cn\/(\d{6})()/i,                   // 同花顺（无前缀）
+  /gushitong\.baidu\.com\/stock\/ab-(\d{6})()/i,              // 百度股市通 /stock/ab-688719
   /\b(sh|sz)(\d{6})\b/i,                                      // 兜底：URL 任意位置的 sh/sz+6位
 ];
 
@@ -16,7 +17,7 @@ export function extractStockCode(url) {
   for (const re of PATTERNS) {
     const m = url.match(re);
     if (!m) continue;
-    // 捕获组顺序可能是 (前缀,代码) 或 (代码,空)——同花顺模式代码在第1组
+    // 捕获组顺序可能是 (前缀,代码) 或 (代码,空)——同花顺/百度模式代码在第1组
     let prefix = m[1], digits = m[2];
     if (/^\d{6}$/.test(prefix || '')) { digits = prefix; prefix = ''; }
     if (!/^\d{6}$/.test(digits || '')) continue;
@@ -24,4 +25,14 @@ export function extractStockCode(url) {
     return p + digits;
   }
   return null;
+}
+
+// 标题兜底：行情页标题普遍含「爱科赛博(688719)」「(SH:688719)」等形态，比 URL 模式更普适
+export function extractFromTitle(title) {
+  if (!title) return null;
+  const m = title.match(/[（(]?\b(SH|SZ)?[:：]?(\d{6})\b[)）]?/i);
+  if (!m) return null;
+  const digits = m[2];
+  const p = (m[1] || '').toLowerCase() || (digits[0] === '6' ? 'sh' : 'sz');
+  return p + digits;
 }

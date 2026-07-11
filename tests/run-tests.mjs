@@ -12,7 +12,7 @@ import { computeSignals } from '../js/signals.js';
 import { genBars, genDemoBars, parseCSV } from '../js/data.js';
 import { buildLevels } from '../js/recursion.js';
 import { buildCommentary } from '../js/commentary.js';
-import { extractStockCode } from '../js/stockurl.js';
+import { extractStockCode, extractFromTitle } from '../js/stockurl.js';
 
 let n = 0, failed = 0;
 function t(name, fn) {
@@ -333,6 +333,17 @@ t('扩展·行情页URL识别股票代码', () => {
   ];
   for (const [url, want] of cases) {
     assert.equal(extractStockCode(url), want, url);
+  }
+  // 标题兜底（URL 识别不到时）
+  const titles = [
+    ['爱科赛博(688719)股票股价_股价行情_财报_数据报告 - 东方财富网', 'sh688719'],
+    ['爱科赛博（SH:688719）实时行情 - 雪球', 'sh688719'],
+    ['宁德时代 300750 - 同花顺', 'sz300750'],
+    ['上证指数(000001) - 某行情站', 'sz000001'],
+    ['新闻：2026年宏观展望 - 财经网', null],
+  ];
+  for (const [title, want] of titles) {
+    assert.equal(extractFromTitle(title), want, title);
   }
 });
 
