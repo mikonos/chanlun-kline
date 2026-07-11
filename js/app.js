@@ -8,6 +8,7 @@ import { buildLevels } from './recursion.js';
 import { computeMACD } from './macd.js';
 import { computeSignals } from './signals.js';
 import { ChanChart } from './chart.js';
+import { fetchQuoteJsonp } from './quotesrc.js';
 
 const $ = id => document.getElementById(id);
 const chart = new ChanChart($('main-cv'), $('macd-cv'), $('info'));
@@ -114,18 +115,20 @@ async function fetchQuote() {
   btn.disabled = true; btn.textContent = '拉取中…';
   try {
     const n = period.startsWith('m') && period !== 'month' ? 1023 : period === 'day' ? 800 : 2000;
-    const d = await api(`api/quote?code=${code}&period=${period}&n=${n}`);
+    let d;
+    try {
+      d = await api(`api/quote?code=${code}&period=${period}&n=${n}`);
+    } catch (e) {
+      if (e.message !== '服务接口不可用') throw e;
+      d = await fetchQuoteJsonp(code, period, n); // 纯静态部署：JSONP 直连行情源，零后端
+    }
     const csv = 'date,open,high,low,close,volume\n' + d.rows.map(r => r.join(',')).join('\n');
     const name = `${d.name || code}(${code})·${PERIOD_NAME[period]}`;
     csvFiles.set(name, parseCSV(csv));
     rebuildCsvOptions();
     $('src').value = 'csv:' + name;
     recompute();
-  } catch (e) {
-    alert(e.message === '服务接口不可用'
-      ? '此部署不含行情代理（在线拉取需 serve.py 本地运行或 Cloudflare Pages 完整版）。可改用「CSV可多选」导入自备数据。'
-      : '拉取失败：' + e.message);
-  }
+  } catch (e) { alert('拉取失败：' + e.message); }
   btn.disabled = false; btn.textContent = '看图';
 }
 $('quote-go').addEventListener('click', fetchQuote);
