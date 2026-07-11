@@ -1,0 +1,5 @@
+history/
+*.csv
+__pycache__/
+.DS_Store
+.claude/
